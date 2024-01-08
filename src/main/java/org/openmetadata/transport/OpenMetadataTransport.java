@@ -53,15 +53,20 @@ import static org.apache.http.entity.ContentType.APPLICATION_JSON;
 @Slf4j
 public final class OpenMetadataTransport extends Transport implements Closeable {
 
-  private final static String SPARK_LINEAGE_SOURCE = "PipelineLineage";
+  private final static String SPARK_LINEAGE_SOURCE = "SparkLineage";
+
+  private final static  String PIPELINE_SOURCE_TYPE = "Spark";
+
   private final CloseableHttpClient http;
   private final URI uri;
   private final String pipelineServiceName;
+
+  private List<String> databaseServiceNames;
+
   private final String pipelineName;
-  private final String pipelineServiceUrl;
   private final String authToken;
   private @Nullable
-  final String pipelineUrl;
+  final String pipelineSourceUrl;
   private @Nullable
   final String pipelineDescription;
 
@@ -73,13 +78,24 @@ public final class OpenMetadataTransport extends Transport implements Closeable 
   public OpenMetadataTransport(
           @NonNull final CloseableHttpClient httpClient, @NonNull final OpenMetadataConfig openMetadataConfig) {
     this.http = httpClient;
-    this.uri = openMetadataConfig.getUrl();
-    this.authToken = openMetadataConfig.getAuthToken();
+    this.uri = openMetadataConfig.getHostPort();
+    this.authToken = openMetadataConfig.getJwtToken();
     this.pipelineName = openMetadataConfig.getPipelineName();
-    this.pipelineServiceUrl = openMetadataConfig.getPipelineServiceUrl();
     this.pipelineServiceName = openMetadataConfig.getPipelineServiceName();
-    this.pipelineUrl = "/tree?dag_id=" + this.pipelineName;
+    this.pipelineSourceUrl = openMetadataConfig.getPipelineSourceUrl();
     this.pipelineDescription = openMetadataConfig.getPipelineDescription();
+    String dbServiceNameStr = openMetadataConfig.getDatabaseServiceNames();
+    if (dbServiceNameStr != null) {
+      try {
+        this.databaseServiceNames = Arrays.asList(dbServiceNameStr.split(","));
+      }
+      catch (Exception e){
+        log.error("failed to emit fetch database service names: {}", e.getMessage(), e);
+      }
+    }
+    else{
+      this.databaseServiceNames = new ArrayList<>();
+    }
     createOrUpdatePipelineService();
   }
 
@@ -174,14 +190,14 @@ public final class OpenMetadataTransport extends Transport implements Closeable 
     }
   }
 
-  private Map<String, Object> getTableEntity(String tableName) {
+  private Map<String, Object> getTableEntity(String tableName, String dbServiceName) {
     try {
-      HttpGet request = createGetTableRequest(tableName);
-      Map response = sendRequest(request);  
+      HttpGet request = createGetTableRequest(tableName, dbServiceName);
+      Map response = sendRequest(request);
       Map<String, Object> hitsResult = (Map<String, Object>) response.get("hits");
       int totalHits = Integer.parseInt(((Map<String, Object>) hitsResult.get("total")).get("value").toString());
       if (totalHits == 0) {
-        log.error("Failed to get id of table {} from OpenMetadata.", tableName);
+        log.debug("Failed to get id of table {} from OpenMetadata.", tableName);
         return null;
       }
       List<Map<String, Object>> tablesData = (List<Map<String, Object>>) hitsResult.get("hits");
@@ -191,13 +207,38 @@ public final class OpenMetadataTransport extends Transport implements Closeable 
       log.error("Failed to get table entity {} from OpenMetadata: ", tableName, e);
       throw new OpenLineageClientException(e);
     }
+
   }
 
-  public HttpGet createGetTableRequest(String tableName) throws Exception {
+
+  private Map<String, Object> getTableEntity(String tableName) {
+    if (this.databaseServiceNames == null || this.databaseServiceNames.isEmpty()){
+      return getTableEntity(tableName, null);
+    }
+    for (String dbService: this.databaseServiceNames){
+      Map<String, Object> result = getTableEntity(tableName, dbService);
+      if (result == null){
+        continue;
+      }
+      return result;
+    }
+    return null;
+  }
+
+  public HttpGet createGetTableRequest(String tableName, String dbServiceName) throws Exception {
     String path = "api/v1/search/query";
     Map<String, String> queryParams = new HashMap<>();
     queryParams.put("size", "10");
-    queryParams.put("q", "fullyQualifiedName:*" + tableName);
+    String fqnQuery;
+    if (dbServiceName != null){
+      fqnQuery =  "fullyQualifiedName:" + dbServiceName + ".*" + tableName;
+    }
+    else {
+      fqnQuery = "fullyQualifiedName:*" + tableName;
+    }
+    System.out.println("***** ***** ***** ***** ***** ***** ");
+    System.out.println(fqnQuery);
+    queryParams.put("q", fqnQuery);
     return createGetRequest(path, queryParams);
   }
 
@@ -353,12 +394,11 @@ public final class OpenMetadataTransport extends Transport implements Closeable 
   public HttpPut createPipelineServiceRequest() throws Exception {
     Map requestMap = new HashMap<>();
     requestMap.put("name", pipelineServiceName);
-    requestMap.put("serviceType", "Airflow");
+    requestMap.put("serviceType", PIPELINE_SOURCE_TYPE);
 
     Map connectionConfig = new HashMap<>();
     connectionConfig.put("config", new HashMap<String, String>() {{
-      put("type", "Airflow");
-      put("hostPort", pipelineServiceUrl);
+      put("type", PIPELINE_SOURCE_TYPE);
     }});
     requestMap.put("connection", connectionConfig);
     String jsonRequest = toJsonString(requestMap);
@@ -368,7 +408,7 @@ public final class OpenMetadataTransport extends Transport implements Closeable 
   public HttpPut createPipelineRequest() throws Exception {
     Map requestMap = new HashMap<>();
     requestMap.put("name", pipelineName);
-    requestMap.put("sourceUrl", pipelineUrl);
+    requestMap.put("sourceUrl", pipelineSourceUrl);
 
     if (pipelineDescription != null && !pipelineDescription.isEmpty()) {
       requestMap.put("description", pipelineDescription);

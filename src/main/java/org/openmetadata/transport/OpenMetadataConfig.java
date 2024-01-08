@@ -27,16 +27,17 @@ import java.net.URI;
 @NoArgsConstructor
 @ToString
 public final class OpenMetadataConfig implements TransportConfig {
-    @Getter @Setter private URI url;
+    @Getter @Setter private URI hostPort;
     @Getter @Setter private @Nullable Double timeout;
     @Getter @Setter private String pipelineName;
-    @Setter private String authToken;
-    @Getter @Setter private String pipelineServiceUrl;
+    @Setter private String jwtToken;
+    @Getter @Setter private String pipelineSourceUrl;
     @Getter @Setter private String pipelineServiceName;
+    @Getter @Setter private String databaseServiceNames;
     @Getter @Setter private @Nullable String pipelineDescription;
 
 
-    public String getAuthToken() {
-        return String.format("Bearer %s", authToken);
+    public String getJwtToken() {
+        return String.format("Bearer %s", jwtToken);
     }
 }
