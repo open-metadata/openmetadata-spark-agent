@@ -6,7 +6,7 @@
    <artifactId>openmetadata-spark-agent</artifactId>
    <packaging>jar</packaging>
    <version>1.0-SNAPSHOT</version>
-   <name>${project.groupId}:${project.artifactId}</name>
+   <name>${project.artifactId}</name>
    <url>https://github.com/open-metadata/OpenMetadata</url>
    <licenses>
       <license>
@@ -95,7 +95,7 @@
       </dependency>
    </dependencies>
    <build>
-      <finalName>${project.groupId}:${project.artifactId}</finalName>
+      <finalName>${project.artifactId}</finalName>
       <pluginManagement>
          <plugins>
             <plugin>
