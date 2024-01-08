@@ -236,8 +236,6 @@ public final class OpenMetadataTransport extends Transport implements Closeable 
     else {
       fqnQuery = "fullyQualifiedName:*" + tableName;
     }
-    System.out.println("***** ***** ***** ***** ***** ***** ");
-    System.out.println(fqnQuery);
     queryParams.put("q", fqnQuery);
     return createGetRequest(path, queryParams);
   }
