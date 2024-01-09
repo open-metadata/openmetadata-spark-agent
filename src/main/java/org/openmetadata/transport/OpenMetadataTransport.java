@@ -12,50 +12,61 @@
  */
 
 /*
- * This code has been referenced from 
+ * This code has been referenced from
  * https://github.com/Natural-Intelligence/openLineage-openMetadata-transporter.git
  */
 
 package org.openmetadata.transport;
+
+import static org.apache.http.Consts.UTF_8;
+import static org.apache.http.HttpHeaders.ACCEPT;
+import static org.apache.http.HttpHeaders.AUTHORIZATION;
+import static org.apache.http.HttpHeaders.CONTENT_TYPE;
+import static org.apache.http.entity.ContentType.APPLICATION_JSON;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.openlineage.client.OpenLineage;
 import io.openlineage.client.OpenLineageClientException;
 import io.openlineage.client.transports.Transport;
+import java.io.Closeable;
+import java.io.IOException;
+import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.function.Supplier;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import javax.annotation.Nullable;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.config.RequestConfig;
-import org.apache.http.client.methods.*;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpPut;
+import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.client.utils.URIBuilder;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.util.EntityUtils;
 
-import javax.annotation.Nullable;
-import java.io.Closeable;
-import java.io.IOException;
-import java.net.MalformedURLException;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.util.*;
-import java.util.function.Supplier;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-
-import static org.apache.http.Consts.UTF_8;
-import static org.apache.http.HttpHeaders.*;
-import static org.apache.http.entity.ContentType.APPLICATION_JSON;
-
 @Slf4j
 public final class OpenMetadataTransport extends Transport implements Closeable {
 
-  private final static String SPARK_LINEAGE_SOURCE = "SparkLineage";
+  private static final String SPARK_LINEAGE_SOURCE = "SparkLineage";
 
-  private final static  String PIPELINE_SOURCE_TYPE = "Spark";
+  private static final String PIPELINE_SOURCE_TYPE = "Spark";
 
   private final CloseableHttpClient http;
   private final URI uri;
@@ -65,18 +76,16 @@ public final class OpenMetadataTransport extends Transport implements Closeable 
 
   private final String pipelineName;
   private final String authToken;
-  private @Nullable
-  final String pipelineSourceUrl;
-  private @Nullable
-  final String pipelineDescription;
-
+  private @Nullable final String pipelineSourceUrl;
+  private @Nullable final String pipelineDescription;
 
   public OpenMetadataTransport(@NonNull final OpenMetadataConfig openMetadataConfig) {
     this(withTimeout(openMetadataConfig.getTimeout()), openMetadataConfig);
   }
 
   public OpenMetadataTransport(
-          @NonNull final CloseableHttpClient httpClient, @NonNull final OpenMetadataConfig openMetadataConfig) {
+      @NonNull final CloseableHttpClient httpClient,
+      @NonNull final OpenMetadataConfig openMetadataConfig) {
     this.http = httpClient;
     this.uri = openMetadataConfig.getHostPort();
     this.authToken = openMetadataConfig.getJwtToken();
@@ -88,12 +97,10 @@ public final class OpenMetadataTransport extends Transport implements Closeable 
     if (dbServiceNameStr != null) {
       try {
         this.databaseServiceNames = Arrays.asList(dbServiceNameStr.split(","));
-      }
-      catch (Exception e){
+      } catch (Exception e) {
         log.error("failed to emit fetch database service names: {}", e.getMessage(), e);
       }
-    }
-    else{
+    } else {
       this.databaseServiceNames = new ArrayList<>();
     }
     createOrUpdatePipelineService();
@@ -108,18 +115,20 @@ public final class OpenMetadataTransport extends Transport implements Closeable 
     }
 
     RequestConfig config =
-            RequestConfig.custom()
-                    .setConnectTimeout(timeoutMs)
-                    .setConnectionRequestTimeout(timeoutMs)
-                    .setSocketTimeout(timeoutMs)
-                    .build();
+        RequestConfig.custom()
+            .setConnectTimeout(timeoutMs)
+            .setConnectionRequestTimeout(timeoutMs)
+            .setSocketTimeout(timeoutMs)
+            .build();
     return HttpClientBuilder.create().setDefaultRequestConfig(config).build();
   }
 
   @Override
   public void emit(@NonNull OpenLineage.RunEvent runEvent) {
     try {
-      if (runEvent.getEventType().equals(OpenLineage.RunEvent.EventType.COMPLETE) && !runEvent.getInputs().isEmpty() && !runEvent.getOutputs().isEmpty()) {
+      if (runEvent.getEventType().equals(OpenLineage.RunEvent.EventType.COMPLETE)
+          && !runEvent.getInputs().isEmpty()
+          && !runEvent.getOutputs().isEmpty()) {
         sendToOpenMetadata(runEvent.getInputs(), runEvent.getOutputs());
       }
     } catch (Exception e) {
@@ -134,7 +143,7 @@ public final class OpenMetadataTransport extends Transport implements Closeable 
     String tableName = extractTableNamesFromSymlinks(dataset);
 
     // Handle table names from JDBC queries that don't have symlinks
-    if(tableName == null){
+    if (tableName == null) {
       tableName = extractTableNamesFromDataSet(dataset);
     }
 
@@ -142,9 +151,11 @@ public final class OpenMetadataTransport extends Transport implements Closeable 
   }
 
   private String extractTableNamesFromSymlinks(OpenLineage.Dataset dataset) {
-    if (dataset.getFacets() != null && dataset.getFacets().getSymlinks() != null &&
-            dataset.getFacets().getSymlinks().getIdentifiers() != null) {
-      for (OpenLineage.SymlinksDatasetFacetIdentifiers identifier : dataset.getFacets().getSymlinks().getIdentifiers()) {
+    if (dataset.getFacets() != null
+        && dataset.getFacets().getSymlinks() != null
+        && dataset.getFacets().getSymlinks().getIdentifiers() != null) {
+      for (OpenLineage.SymlinksDatasetFacetIdentifiers identifier :
+          dataset.getFacets().getSymlinks().getIdentifiers()) {
         String name = identifier.getName();
         return name;
       }
@@ -170,7 +181,9 @@ public final class OpenMetadataTransport extends Transport implements Closeable 
     return name;
   }
 
-  public void sendToOpenMetadata(List<? extends OpenLineage.Dataset> inputTables, List<? extends OpenLineage.Dataset> outputTables) {
+  public void sendToOpenMetadata(
+      List<? extends OpenLineage.Dataset> inputTables,
+      List<? extends OpenLineage.Dataset> outputTables) {
     String pipelineId = createOrUpdatePipeline();
     for (OpenLineage.Dataset fromTable : inputTables) {
       String inputTableName = getTableNames(fromTable);
@@ -184,8 +197,11 @@ public final class OpenMetadataTransport extends Transport implements Closeable 
           continue;
         }
         Map toTableEntity = getTableEntity(outputTableName);
-        createOrUpdateLineage(pipelineId, fromTableEntity, toTableEntity , fromTable, toTable);
-        log.info(String.format("lineage was sent successfully to OpenMetadata for fromTable: %s, toTable: %s", inputTableName, outputTableName));
+        createOrUpdateLineage(pipelineId, fromTableEntity, toTableEntity, fromTable, toTable);
+        log.info(
+            String.format(
+                "lineage was sent successfully to OpenMetadata for fromTable: %s, toTable: %s",
+                inputTableName, outputTableName));
       }
     }
   }
@@ -195,29 +211,31 @@ public final class OpenMetadataTransport extends Transport implements Closeable 
       HttpGet request = createGetTableRequest(tableName, dbServiceName);
       Map response = sendRequest(request);
       Map<String, Object> hitsResult = (Map<String, Object>) response.get("hits");
-      int totalHits = Integer.parseInt(((Map<String, Object>) hitsResult.get("total")).get("value").toString());
+      int totalHits =
+          Integer.parseInt(((Map<String, Object>) hitsResult.get("total")).get("value").toString());
       if (totalHits == 0) {
         log.debug("Failed to get id of table {} from OpenMetadata.", tableName);
         return null;
       }
       List<Map<String, Object>> tablesData = (List<Map<String, Object>>) hitsResult.get("hits");
-      return tablesData.stream().map(t -> ((Map<String, Object>) t.get("_source"))).collect(Collectors.toList()).get(0);
+      return tablesData.stream()
+          .map(t -> ((Map<String, Object>) t.get("_source")))
+          .collect(Collectors.toList())
+          .get(0);
 
     } catch (Exception e) {
       log.error("Failed to get table entity {} from OpenMetadata: ", tableName, e);
       throw new OpenLineageClientException(e);
     }
-
   }
 
-
   private Map<String, Object> getTableEntity(String tableName) {
-    if (this.databaseServiceNames == null || this.databaseServiceNames.isEmpty()){
+    if (this.databaseServiceNames == null || this.databaseServiceNames.isEmpty()) {
       return getTableEntity(tableName, null);
     }
-    for (String dbService: this.databaseServiceNames){
+    for (String dbService : this.databaseServiceNames) {
       Map<String, Object> result = getTableEntity(tableName, dbService);
-      if (result == null){
+      if (result == null) {
         continue;
       }
       return result;
@@ -230,10 +248,9 @@ public final class OpenMetadataTransport extends Transport implements Closeable 
     Map<String, String> queryParams = new HashMap<>();
     queryParams.put("size", "10");
     String fqnQuery;
-    if (dbServiceName != null){
-      fqnQuery =  "fullyQualifiedName:" + dbServiceName + ".*" + tableName;
-    }
-    else {
+    if (dbServiceName != null) {
+      fqnQuery = "fullyQualifiedName:" + dbServiceName + ".*" + tableName;
+    } else {
       fqnQuery = "fullyQualifiedName:*" + tableName;
     }
     queryParams.put("q", fqnQuery);
@@ -246,7 +263,8 @@ public final class OpenMetadataTransport extends Transport implements Closeable 
       Map response = sendRequest(request);
       return response.get("id").toString();
     } catch (Exception e) {
-      log.error("Failed to create/update service pipeline {} in OpenMetadata: ", pipelineServiceName, e);
+      log.error(
+          "Failed to create/update service pipeline {} in OpenMetadata: ", pipelineServiceName, e);
       throw new OpenLineageClientException(e);
     }
   }
@@ -262,10 +280,19 @@ public final class OpenMetadataTransport extends Transport implements Closeable 
     }
   }
 
-  private void createOrUpdateLineage(String pipelineId, Map fromTableEntity, Map toTableEntity, OpenLineage.Dataset fromTable, OpenLineage.Dataset toTable) {
+  private void createOrUpdateLineage(
+      String pipelineId,
+      Map fromTableEntity,
+      Map toTableEntity,
+      OpenLineage.Dataset fromTable,
+      OpenLineage.Dataset toTable) {
     try {
-      if (fromTableEntity != null && fromTableEntity.get("id") != null && toTableEntity != null && toTableEntity.get("id") != null) {
-        HttpPut request = createLineageRequest(pipelineId, fromTableEntity, toTableEntity, fromTable, toTable);
+      if (fromTableEntity != null
+          && fromTableEntity.get("id") != null
+          && toTableEntity != null
+          && toTableEntity.get("id") != null) {
+        HttpPut request =
+            createLineageRequest(pipelineId, fromTableEntity, toTableEntity, fromTable, toTable);
         sendRequest(request);
       }
     } catch (Exception e) {
@@ -282,50 +309,74 @@ public final class OpenMetadataTransport extends Transport implements Closeable 
     }
   }
 
-  private String getColumnFQN(Map tableEntity, String columnName){
-    return tableEntity.get("fullyQualifiedName") + "." +  columnName;
+  private String getColumnFQN(Map tableEntity, String columnName) {
+    return tableEntity.get("fullyQualifiedName") + "." + columnName;
   }
 
-  private Set getColumnLevelLineage(Map fromTableEntity, Map toTableEntity, OpenLineage.Dataset fromTable, OpenLineage.Dataset toTable) {
+  private Set getColumnLevelLineage(
+      Map fromTableEntity,
+      Map toTableEntity,
+      OpenLineage.Dataset fromTable,
+      OpenLineage.Dataset toTable) {
     Set columnLineage = new HashSet();
-    try{
+    try {
       if (toTable.getFacets() != null
-              && toTable.getFacets().getColumnLineage() != null
-              && toTable.getFacets().getColumnLineage().getFields() != null
-              && toTable.getFacets().getColumnLineage().getFields().getAdditionalProperties() != null
-      ) {
+          && toTable.getFacets().getColumnLineage() != null
+          && toTable.getFacets().getColumnLineage().getFields() != null
+          && toTable.getFacets().getColumnLineage().getFields().getAdditionalProperties() != null) {
         Set<String> fromColSet = new HashSet<>((Collection) fromTableEntity.get("columnNames"));
         Set<String> toColSet = new HashSet<>((Collection) toTableEntity.get("columnNames"));
-        toTable.getFacets().getColumnLineage().getFields().getAdditionalProperties().forEach((key, value) -> {
-          if (toColSet.contains(key)){
-            value.getInputFields().forEach(input -> {
-              if (input.getName().equals(fromTable.getName()) && fromColSet.contains(input.getField())) {
-                Map columnLineageMap = new HashMap<>();
-                columnLineageMap.put("fromColumns", new String[]{getColumnFQN(fromTableEntity,input.getField())});
-                columnLineageMap.put("toColumn",getColumnFQN(toTableEntity,key));
-                columnLineage.add(columnLineageMap);
-              }
-            });
-          }});
+        toTable
+            .getFacets()
+            .getColumnLineage()
+            .getFields()
+            .getAdditionalProperties()
+            .forEach(
+                (key, value) -> {
+                  if (toColSet.contains(key)) {
+                    value
+                        .getInputFields()
+                        .forEach(
+                            input -> {
+                              if (input.getName().equals(fromTable.getName())
+                                  && fromColSet.contains(input.getField())) {
+                                Map columnLineageMap = new HashMap<>();
+                                columnLineageMap.put(
+                                    "fromColumns",
+                                    new String[] {getColumnFQN(fromTableEntity, input.getField())});
+                                columnLineageMap.put("toColumn", getColumnFQN(toTableEntity, key));
+                                columnLineage.add(columnLineageMap);
+                              }
+                            });
+                  }
+                });
       }
 
-    }
-    catch (Exception err){
-      log.error(String.format("Failed to extract column level lineage due to %s", err.getMessage()));
+    } catch (Exception err) {
+      log.error(
+          String.format("Failed to extract column level lineage due to %s", err.getMessage()));
       err.printStackTrace();
     }
 
     return columnLineage;
   }
 
-  public HttpPut createLineageRequest(String pipelineId, Map fromTableEntity, Map toTableEntity, OpenLineage.Dataset fromTable, OpenLineage.Dataset toTable) throws Exception {
+  public HttpPut createLineageRequest(
+      String pipelineId,
+      Map fromTableEntity,
+      Map toTableEntity,
+      OpenLineage.Dataset fromTable,
+      OpenLineage.Dataset toTable)
+      throws Exception {
     Map edgeMap = new HashMap<>();
     edgeMap.put("toEntity", createEntityMap("table", toTableEntity.get("id").toString()));
     edgeMap.put("fromEntity", createEntityMap("table", fromTableEntity.get("id").toString()));
     Map lineageDetails = new HashMap();
     lineageDetails.put("pipeline", createEntityMap("pipeline", pipelineId));
     lineageDetails.put("source", SPARK_LINEAGE_SOURCE);
-    lineageDetails.put("columnsLineage", getColumnLevelLineage(fromTableEntity, toTableEntity, fromTable, toTable));
+    lineageDetails.put(
+        "columnsLineage",
+        getColumnLevelLineage(fromTableEntity, toTableEntity, fromTable, toTable));
     edgeMap.put("lineageDetails", lineageDetails);
     Map requestMap = new HashMap<>();
     requestMap.put("edge", edgeMap);
@@ -358,20 +409,22 @@ public final class OpenMetadataTransport extends Transport implements Closeable 
   }
 
   public HttpPut createPutRequest(String path, String jsonRequest) {
-    try{
+    try {
       HttpPut request = (HttpPut) createHttpRequest(HttpPut::new, path, null);
       request.setEntity(new StringEntity(jsonRequest, APPLICATION_JSON));
       return request;
-    }
-    catch (Exception exception){
-      log.error(String.format("Failed to create lineage in OpenMetadata due to %s", exception.getMessage()));
+    } catch (Exception exception) {
+      log.error(
+          String.format(
+              "Failed to create lineage in OpenMetadata due to %s", exception.getMessage()));
       exception.printStackTrace();
     }
     return null;
   }
 
-  private HttpRequestBase createHttpRequest(Supplier<HttpRequestBase> supplier, String path,
-                                            Map<String, String> queryParams) throws URISyntaxException, MalformedURLException {
+  private HttpRequestBase createHttpRequest(
+      Supplier<HttpRequestBase> supplier, String path, Map<String, String> queryParams)
+      throws URISyntaxException, MalformedURLException {
     URIBuilder uriBuilder = new URIBuilder(this.uri);
     uriBuilder.setPath(path);
     if (queryParams != null) {
@@ -395,9 +448,13 @@ public final class OpenMetadataTransport extends Transport implements Closeable 
     requestMap.put("serviceType", PIPELINE_SOURCE_TYPE);
 
     Map connectionConfig = new HashMap<>();
-    connectionConfig.put("config", new HashMap<String, String>() {{
-      put("type", PIPELINE_SOURCE_TYPE);
-    }});
+    connectionConfig.put(
+        "config",
+        new HashMap<String, String>() {
+          {
+            put("type", PIPELINE_SOURCE_TYPE);
+          }
+        });
     requestMap.put("connection", connectionConfig);
     String jsonRequest = toJsonString(requestMap);
     return createPutRequest("/api/v1/services/pipelineServices", jsonRequest);
@@ -437,8 +494,8 @@ public final class OpenMetadataTransport extends Transport implements Closeable 
     final int code = response.getStatusLine().getStatusCode();
     if (code >= 400 && code < 600) { // non-2xx
       String message =
-              String.format(
-                      "code: %d, response: %s", code, EntityUtils.toString(response.getEntity(), UTF_8));
+          String.format(
+              "code: %d, response: %s", code, EntityUtils.toString(response.getEntity(), UTF_8));
       throw new OpenLineageClientException(message);
     }
   }

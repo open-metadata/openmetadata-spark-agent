@@ -11,10 +11,10 @@
  *  limitations under the License.
  */
 
- /*
-  * This code has been referenced from 
-  * https://github.com/Natural-Intelligence/openLineage-openMetadata-transporter.git
-  */
+/*
+ * This code has been referenced from
+ * https://github.com/Natural-Intelligence/openLineage-openMetadata-transporter.git
+ */
 
 package org.openmetadata.transport;
 
@@ -23,18 +23,18 @@ import io.openlineage.client.transports.TransportBuilder;
 import io.openlineage.client.transports.TransportConfig;
 
 public class OpenMetadataTransportBuilder implements TransportBuilder {
-    @Override
-    public TransportConfig getConfig() {
-        return new OpenMetadataConfig();
-    }
+  @Override
+  public TransportConfig getConfig() {
+    return new OpenMetadataConfig();
+  }
 
-    @Override
-    public Transport build(TransportConfig config) {
-        return new OpenMetadataTransport((OpenMetadataConfig) config);
-    }
+  @Override
+  public Transport build(TransportConfig config) {
+    return new OpenMetadataTransport((OpenMetadataConfig) config);
+  }
 
-    @Override
-    public String getType() {
-        return "openMetadata";
-    }
+  @Override
+  public String getType() {
+    return "openMetadata";
+  }
 }

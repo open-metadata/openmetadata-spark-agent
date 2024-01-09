@@ -29,9 +29,10 @@
   </scm>
    <properties>
       <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-      <maven.compiler.source>1.8</maven.compiler.source>
-      <maven.compiler.target>1.8</maven.compiler.target>
+      <maven.compiler.source>11</maven.compiler.source>
+      <maven.compiler.target>11</maven.compiler.target>
       <openLineageVersion>1.7.0</openLineageVersion>
+      <spotless.version>2.41.1</spotless.version>
       <sparkVersion>3.5.0</sparkVersion>
    </properties>
    <dependencies>
@@ -120,6 +121,33 @@
                      <id>attach-javadocs</id>
                      <goals>
                         <goal>jar</goal>
+                     </goals>
+                  </execution>
+               </executions>
+            </plugin>
+            <plugin>
+               <groupId>com.diffplug.spotless</groupId>
+               <artifactId>spotless-maven-plugin</artifactId>
+               <version>${spotless.version}</version>
+               <configuration>
+                  <java>
+                     <includes>
+                        <include>src/main/java/**/*.java</include>
+                        <include>src/test/java/**/*.java</include>
+                     </includes>
+                     <googleJavaFormat>
+                        <style>GOOGLE</style>
+                        <reflowLongStrings>false</reflowLongStrings>
+                        <formatJavadoc>false</formatJavadoc>
+                        <groupArtifact>com.google.googlejavaformat:google-java-format</groupArtifact>
+                     </googleJavaFormat>
+                     <removeUnusedImports/>
+                  </java>
+               </configuration>
+               <executions>
+                  <execution>
+                     <goals>
+                        <goal>check</goal>
                      </goals>
                   </execution>
                </executions>

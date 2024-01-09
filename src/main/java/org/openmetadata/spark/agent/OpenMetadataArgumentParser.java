@@ -12,7 +12,7 @@
  */
 
 /*
- * This code has been referenced from 
+ * This code has been referenced from
  * https://github.com/openlineage/OpenLineage
  */
 
@@ -25,6 +25,9 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.openlineage.client.OpenLineageClientUtils;
 import io.openlineage.client.OpenLineageYaml;
+import io.openlineage.spark.agent.ArgumentParser;
+import io.openlineage.spark.agent.ArgumentParser.ArgumentParserBuilder;
+import io.openlineage.spark.agent.UrlParser;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -34,9 +37,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
-
-import io.openlineage.spark.agent.ArgumentParser;
-import io.openlineage.spark.agent.ArgumentParser.ArgumentParserBuilder;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -45,14 +45,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.spark.SparkConf;
 import scala.Tuple2;
-import io.openlineage.spark.agent.UrlParser;
 
 @AllArgsConstructor
 @Slf4j
 @Getter
 @ToString
 @Builder
-public class OpenMetadataArgumentParser{
+public class OpenMetadataArgumentParser {
 
   public static final String SPARK_CONF_NAMESPACE = "spark.openmetadata.namespace";
   public static final String SPARK_CONF_JOB_NAME = "spark.openmetadata.parentJobName";
@@ -70,7 +69,6 @@ public class OpenMetadataArgumentParser{
           Arrays.asList("transport.properties.", "transport.urlParams.", "transport.headers."));
   public static final String SPARK_CONF_CUSTOM_ENVIRONMENT_VARIABLES =
       "spark.openmetadata.facets.custom_environment_variables";
-
 
   public static ArgumentParser parse(SparkConf conf) {
     ArgumentParserBuilder builder = ArgumentParser.builder();
