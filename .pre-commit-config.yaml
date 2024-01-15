@@ -1,0 +1,12 @@
+default_language_version:
+  python: python3
+repos:
+  - repo: local
+    hooks:
+      - id: google-style-java
+        name: Google Java Code Style for Java
+        description: Formats code in Google's Java codestyle with 120 line length.
+        entry: scripts/format-code.sh
+        language: script
+        files: \.java$
+        require_serial: true
