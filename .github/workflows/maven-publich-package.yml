@@ -56,7 +56,6 @@ jobs:
           librdkafka-dev unixodbc-dev libevent-dev
       - name: Setup Test Containers Properties
         run: |
-          sudo make install_antlr_cli
           echo 'testcontainers.reuse.enable=true' >> $HOME/.testcontainers.properties
       - name: Setup settings-security.xml
         run: |
