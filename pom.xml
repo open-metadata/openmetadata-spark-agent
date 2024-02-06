@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
    <description>OpenMetadata Spark Agent</description>
    <modelVersion>4.0.0</modelVersion>
    <groupId>org.open-metadata</groupId>
@@ -21,12 +23,12 @@
          <organization>Get Collate</organization>
          <organizationUrl>https://getcollate.io/</organizationUrl>
       </developer>
-  </developers>
+   </developers>
    <scm>
-    <connection>scm:git:git@github.com:Open-Metadata/OpenMetadata</connection>
-    <developerConnection>scm:git:git@github.com:Open-Metadata/OpenMetadata</developerConnection>
-    <url>scm:git:git@github.com:Open-Metadata/OpenMetadata</url>
-  </scm>
+      <connection>scm:git:git@github.com:Open-Metadata/OpenMetadata</connection>
+      <developerConnection>scm:git:git@github.com:Open-Metadata/OpenMetadata</developerConnection>
+      <url>scm:git:git@github.com:Open-Metadata/OpenMetadata</url>
+   </scm>
    <properties>
       <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
       <maven.compiler.source>11</maven.compiler.source>
@@ -142,7 +144,7 @@
                         <formatJavadoc>false</formatJavadoc>
                         <groupArtifact>com.google.googlejavaformat:google-java-format</groupArtifact>
                      </googleJavaFormat>
-                     <removeUnusedImports/>
+                     <removeUnusedImports />
                   </java>
                </configuration>
                <executions>
@@ -186,47 +188,47 @@
       </plugins>
    </build>
    <repositories>
-    <repository>
-      <releases>
-        <enabled>true</enabled>
-      </releases>
-      <snapshots>
-        <enabled>false</enabled>
-      </snapshots>
-      <id>central</id>
-      <url>https://repo1.maven.org/maven2/</url>
-    </repository>
-    <repository>
-      <releases>
-        <enabled>true</enabled>
-      </releases>
-      <snapshots>
-        <enabled>true</enabled>
-      </snapshots>
-      <id>clojars</id>
-      <url>https://repository.apache.org/content/repositories/snapshots/</url>
-    </repository>
-    <repository>
-      <releases>
-        <enabled>true</enabled>
-      </releases>
-      <snapshots>
-        <enabled>true</enabled>
-      </snapshots>
-      <id>aws-redshift</id>
-      <url>https://s3.amazonaws.com/redshift-maven-repository/release</url>
-    </repository>
-  </repositories>
-  <distributionManagement>
-    <snapshotRepository>
-      <id>ossrh</id>
-      <url>https://s01.oss.sonatype.org/content/repositories/snapshots</url>
-    </snapshotRepository>
-    <repository>
-      <id>ossrh</id>
-      <url>https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/</url>
-    </repository>
-  </distributionManagement>
+      <repository>
+         <releases>
+            <enabled>true</enabled>
+         </releases>
+         <snapshots>
+            <enabled>false</enabled>
+         </snapshots>
+         <id>central</id>
+         <url>https://repo1.maven.org/maven2/</url>
+      </repository>
+      <repository>
+         <releases>
+            <enabled>true</enabled>
+         </releases>
+         <snapshots>
+            <enabled>true</enabled>
+         </snapshots>
+         <id>clojars</id>
+         <url>https://repository.apache.org/content/repositories/snapshots/</url>
+      </repository>
+      <repository>
+         <releases>
+            <enabled>true</enabled>
+         </releases>
+         <snapshots>
+            <enabled>true</enabled>
+         </snapshots>
+         <id>aws-redshift</id>
+         <url>https://s3.amazonaws.com/redshift-maven-repository/release</url>
+      </repository>
+   </repositories>
+   <distributionManagement>
+      <snapshotRepository>
+         <id>ossrh</id>
+         <url>https://s01.oss.sonatype.org/content/repositories/snapshots</url>
+      </snapshotRepository>
+      <repository>
+         <id>ossrh</id>
+         <url>https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+      </repository>
+   </distributionManagement>
    <profiles>
       <profile>
          <id>ci-cd</id>
@@ -236,18 +238,18 @@
                   <groupId>org.apache.maven.plugins</groupId>
                   <artifactId>maven-release-plugin</artifactId>
                   <version>2.5.3</version>
-                    <dependencies>
-                    <dependency>
+                  <dependencies>
+                     <dependency>
                         <groupId>org.apache.maven.scm</groupId>
                         <artifactId>maven-scm-provider-gitexe</artifactId>
                         <version>1.8.1</version>
-                    </dependency>
-                    <dependency>
+                     </dependency>
+                     <dependency>
                         <groupId>org.sonatype.plexus</groupId>
                         <artifactId>plexus-sec-dispatcher</artifactId>
                         <version>1.4</version>
-                    </dependency>
-                    </dependencies>
+                     </dependency>
+                  </dependencies>
                   <configuration>
                      <tagNameFormat>@{project.version}</tagNameFormat>
                   </configuration>
@@ -263,6 +265,62 @@
                <plugin>
                   <groupId>org.apache.maven.plugins</groupId>
                   <artifactId>maven-gpg-plugin</artifactId>
+                  <executions>
+                     <execution>
+                        <id>sign-artifacts</id>
+                        <phase>verify</phase>
+                        <goals>
+                           <goal>sign</goal>
+                        </goals>
+                        <configuration>
+                           <gpgArguments>
+                              <arg>--pinentry-mode</arg>
+                              <arg>loopback</arg>
+                           </gpgArguments>
+                        </configuration>
+                     </execution>
+                  </executions>
+               </plugin>
+            </plugins>
+         </build>
+      </profile>
+      <profile>
+         <id>release</id>
+         <build>
+            <plugins>
+               <plugin>
+                  <groupId>org.apache.maven.plugins</groupId>
+                  <artifactId>maven-source-plugin</artifactId>
+                  <version>${maven-source-plugin.version}</version>
+                  <executions>
+                     <execution>
+                        <id>attach-sources</id>
+                        <goals>
+                           <goal>jar-no-fork</goal>
+                        </goals>
+                     </execution>
+                  </executions>
+               </plugin>
+               <plugin>
+                  <groupId>org.apache.maven.plugins</groupId>
+                  <artifactId>maven-javadoc-plugin</artifactId>
+                  <version>${maven-javadoc-plugin.version}</version>
+                  <configuration>
+                     <doclint>none</doclint>
+                  </configuration>
+                  <executions>
+                     <execution>
+                        <id>attach-javadocs</id>
+                        <goals>
+                           <goal>jar</goal>
+                        </goals>
+                     </execution>
+                  </executions>
+               </plugin>
+               <plugin>
+                  <groupId>org.apache.maven.plugins</groupId>
+                  <artifactId>maven-gpg-plugin</artifactId>
+                  <version>3.0.1</version>
                   <executions>
                      <execution>
                         <id>sign-artifacts</id>
