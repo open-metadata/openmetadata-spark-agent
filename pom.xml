@@ -36,6 +36,8 @@
       <openLineageVersion>1.7.0</openLineageVersion>
       <spotless.version>2.41.1</spotless.version>
       <maven-release-plugin.version>3.0.1</maven-release-plugin.version>
+      <maven-javadoc-plugin.version>3.6.0</maven-javadoc-plugin.version>
+      <maven-source-plugin.version>3.3.0</maven-source-plugin.version>
       <sparkVersion>3.5.0</sparkVersion>
    </properties>
    <dependencies>
