@@ -126,7 +126,16 @@ public final class OpenMetadataTransport extends Transport implements Closeable 
   @Override
   public void emit(@NonNull OpenLineage.RunEvent runEvent) {
     try {
-      if (runEvent.getEventType().equals(OpenLineage.RunEvent.EventType.COMPLETE)
+      log.debug(
+          "Captured Event Type " + runEvent.getEventType().toString() + " to Parse for Lineage");
+      for (OpenLineage.InputDataset input : runEvent.getInputs()) {
+        log.debug("Input Dataset: " + input.getName());
+      }
+      for (OpenLineage.OutputDataset output : runEvent.getOutputs()) {
+        log.debug("Output Dataset: " + output.getName());
+      }
+      if (((runEvent.getEventType().equals(OpenLineage.RunEvent.EventType.COMPLETE))
+              || (runEvent.getEventType().equals(OpenLineage.RunEvent.EventType.START)))
           && !runEvent.getInputs().isEmpty()
           && !runEvent.getOutputs().isEmpty()) {
         sendToOpenMetadata(runEvent.getInputs(), runEvent.getOutputs());
