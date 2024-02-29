@@ -1,0 +1,97 @@
+#  Copyright 2021 Collate
+#  Licensed under the Apache License, Version 2.0 (the "License");
+#  you may not use this file except in compliance with the License.
+#  You may obtain a copy of the License at
+#  http://www.apache.org/licenses/LICENSE-2.0
+#  Unless required by applicable law or agreed to in writing, software
+#  distributed under the License is distributed on an "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  See the License for the specific language governing permissions and
+#  limitations under the License.
+
+name: pyspark-test
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - '0.[0-9]+.[0-9]+'
+  pull_request_target:
+    types: [labeled, opened, synchronize, reopened]
+    paths:
+      - "src/**"
+      - "tests/**"
+      - "pom.xml"
+
+permissions:
+  contents: read
+
+jobs:
+  py-run-tests:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+    steps:
+    - name: Free Disk Space (Ubuntu)
+      uses: jlumbroso/free-disk-space@main
+      with:
+          tool-cache: false
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: false
+          swap-storage: true
+          docker-images: false
+
+    - name: Checkout
+      uses: actions/checkout@v3
+      with:
+        ref: ${{ github.event.pull_request.head.sha }}
+        fetch-depth: 0
+
+    - name: Set up JDK 11
+      uses: actions/setup-java@v3
+      with:
+        java-version: '11'
+        distribution: 'temurin'
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    - name: Install Ubuntu dependencies
+      run: |
+        sudo apt-get update && sudo apt-get install -y python3-venv gcc python3-dev
+      
+    - name: Build Spark Agent Jar
+      run: | 
+        make build_dev
+
+    - name: Prepare Python Environment
+      run: |
+        python3 -m venv env
+        source env/bin/activate
+        make install_ci_dep
+
+    - name: Start Server and Ingest Sample Data
+      uses: nick-fields/retry@v2.8.3
+      with:
+        timeout_minutes: 60
+        max_attempts: 2
+        retry_on: error
+        command: make start_om
+
+    - name: Run Python Tests & record coverage
+      if: ${{ matrix.py-version == '3.9' }}
+      run: |
+        source env/bin/activate
+        make coverage
+        rm pom.xml
+        # fix coverage xml report for github
+        sed -i 's/src\/metadata/\/github\/workspace\/ingestion\/src\/metadata/g' ingestion/ci-coverage.xml
+
+    - name: Clean Up
+      run: |
+        docker compose down --remove-orphans
+        sudo rm -rf ${PWD}/docker-volume
