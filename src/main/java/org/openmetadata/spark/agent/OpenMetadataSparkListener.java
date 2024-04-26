@@ -255,9 +255,11 @@ public class OpenMetadataSparkListener extends org.apache.spark.scheduler.SparkL
         .job(
             ol.newJobBuilder()
                 .namespace(contextFactory.openLineageEventEmitter.getJobNamespace())
-                .name(contextFactory.openLineageEventEmitter.getParentJobName()
-                    .orElse(contextFactory.openLineageEventEmitter.getApplicationJobName())
-                )
+                .name(
+                    contextFactory
+                        .openLineageEventEmitter
+                        .getParentJobName()
+                        .orElse(contextFactory.openLineageEventEmitter.getApplicationJobName()))
                 .build())
         .build();
   }
