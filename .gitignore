@@ -33,7 +33,6 @@ logs
 *.iws
 .idea/
 # Package Files
-*.jar
 *.war
 *.ear
 
