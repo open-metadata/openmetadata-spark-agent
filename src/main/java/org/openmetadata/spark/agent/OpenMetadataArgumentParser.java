@@ -54,11 +54,13 @@ import scala.Tuple2;
 public class OpenMetadataArgumentParser {
 
   public static final String SPARK_CONF_NAMESPACE = "spark.openmetadata.namespace";
-  public static final String SPARK_CONF_JOB_NAME = "spark.openmetadata.parentJobName";
+  public static final String SPARK_CONF_PARENT_JOB_NAMESPACE =
+      "spark.openmetadata.parentJobNamespace";
+  public static final String SPARK_CONF_PARENT_JOB_NAME = "spark.openmetadata.parentJobName";
   public static final String SPARK_CONF_PARENT_RUN_ID = "spark.openmetadata.parentRunId";
   public static final String SPARK_CONF_APP_NAME = "spark.openmetadata.appName";
   public static final String SPARK_CONF_DISABLED_FACETS = "spark.openmetadata.facets.disabled";
-  public static final String DEFAULT_DISABLED_FACETS = "[spark_unknown;]";
+  public static final String DEFAULT_DISABLED_FACETS = "[spark_unknown;spark.logicalPlan]";
   public static final String ARRAY_PREFIX_CHAR = "[";
   public static final String ARRAY_SUFFIX_CHAR = "]";
   public static final String DISABLED_FACETS_SEPARATOR = ";";
@@ -81,9 +83,11 @@ public class OpenMetadataArgumentParser {
     }
     findSparkConfigKey(conf, SPARK_CONF_APP_NAME)
         .filter(str -> !str.isEmpty())
-        .ifPresent(builder::appName);
+        .ifPresent(builder::overriddenAppName);
     findSparkConfigKey(conf, SPARK_CONF_NAMESPACE).ifPresent(builder::namespace);
-    findSparkConfigKey(conf, SPARK_CONF_JOB_NAME).ifPresent(builder::jobName);
+    findSparkConfigKey(conf, SPARK_CONF_PARENT_JOB_NAME).ifPresent(builder::parentJobName);
+    findSparkConfigKey(conf, SPARK_CONF_PARENT_JOB_NAMESPACE)
+        .ifPresent(builder::parentJobNamespace);
     findSparkConfigKey(conf, SPARK_CONF_PARENT_RUN_ID).ifPresent(builder::parentRunId);
     builder.openLineageYaml(OpenMetadataArgumentParser.extractOpenlineageConfFromSparkConf(conf));
     return builder.build();

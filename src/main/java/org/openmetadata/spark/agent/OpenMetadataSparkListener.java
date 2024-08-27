@@ -20,6 +20,8 @@ package org.openmetadata.spark.agent;
 
 import static io.openlineage.spark.agent.util.ScalaConversionUtils.asJavaOptional;
 
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.openlineage.client.Environment;
 import io.openlineage.client.OpenLineage;
 import io.openlineage.spark.agent.ArgumentParser;
@@ -74,6 +76,7 @@ public class OpenMetadataSparkListener extends org.apache.spark.scheduler.SparkL
   private static WeakHashMap<RDD<?>, Configuration> outputs = new WeakHashMap<>();
   private static ContextFactory contextFactory;
   private static JobMetricsHolder jobMetrics = JobMetricsHolder.getInstance();
+  private static MeterRegistry meterRegistry = new SimpleMeterRegistry(); // dummy registry
   private final Function1<SparkSession, SparkContext> sparkContextFromSession =
       ScalaConversionUtils.toScalaFn(SparkSession::sparkContext);
   private final Function0<Option<SparkContext>> activeSparkContext =
@@ -252,7 +255,11 @@ public class OpenMetadataSparkListener extends org.apache.spark.scheduler.SparkL
         .job(
             ol.newJobBuilder()
                 .namespace(contextFactory.openLineageEventEmitter.getJobNamespace())
-                .name(contextFactory.openLineageEventEmitter.getParentJobName())
+                .name(
+                    contextFactory
+                        .openLineageEventEmitter
+                        .getParentJobName()
+                        .orElse(contextFactory.openLineageEventEmitter.getApplicationJobName()))
                 .build())
         .build();
   }
@@ -281,10 +288,18 @@ public class OpenMetadataSparkListener extends org.apache.spark.scheduler.SparkL
    */
   @Override
   public void onApplicationStart(SparkListenerApplicationStart applicationStart) {
-    initializeContextFactoryIfNotInitialized();
+    initializeContextFactoryIfNotInitialized(applicationStart.appName());
   }
 
   private void initializeContextFactoryIfNotInitialized() {
+    if (contextFactory != null || isDisabled) {
+      return;
+    }
+    asJavaOptional(activeSparkContext.apply())
+        .ifPresent(context -> initializeContextFactoryIfNotInitialized(context.appName()));
+  }
+
+  private void initializeContextFactoryIfNotInitialized(String appName) {
     if (contextFactory != null || isDisabled) {
       return;
     }
@@ -292,7 +307,7 @@ public class OpenMetadataSparkListener extends org.apache.spark.scheduler.SparkL
     if (sparkEnv != null) {
       try {
         ArgumentParser args = OpenMetadataArgumentParser.parse(sparkEnv.conf());
-        contextFactory = new ContextFactory(new EventEmitter(args));
+        contextFactory = new ContextFactory(new EventEmitter(args, appName), meterRegistry);
       } catch (URISyntaxException e) {
         log.error("Unable to parse open lineage endpoint. Lineage events will not be collected", e);
       }
