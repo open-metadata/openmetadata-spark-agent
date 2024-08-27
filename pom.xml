@@ -6,7 +6,7 @@
    <modelVersion>4.0.0</modelVersion>
    <groupId>org.open-metadata</groupId>
    <artifactId>openmetadata-spark-agent</artifactId>
-   <version>1.0-SNAPSHOT</version>
+   <version>1.0-spark_3.5</version>
    <name>${project.groupId}:${project.artifactId}</name>
    <url>https://github.com/open-metadata/OpenMetadata</url>
    
@@ -50,7 +50,7 @@
       <spotless.version>2.41.1</spotless.version>
       <maven-javadoc-plugin.version>3.6.0</maven-javadoc-plugin.version>
       <maven-source-plugin.version>3.3.0</maven-source-plugin.version>
-      <sparkVersion>3.5.0</sparkVersion>
+      <sparkVersion>3.5.2</sparkVersion>
    </properties>
    <dependencies>
       <dependency>
