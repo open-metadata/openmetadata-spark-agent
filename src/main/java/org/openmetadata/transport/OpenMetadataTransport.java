@@ -146,6 +146,16 @@ public final class OpenMetadataTransport extends Transport implements Closeable 
     }
   }
 
+  @Override
+  public void emit(OpenLineage.@NonNull DatasetEvent datasetEvent) {
+    // ignoring as this is a design-time and not a run-time event
+  }
+
+  @Override
+  public void emit(OpenLineage.@NonNull JobEvent jobEvent) {
+    // ignoring as this is a design-time and not a run-time event
+  }
+
   private String getTableNames(OpenLineage.Dataset dataset) {
     if (dataset == null) {
       return null;

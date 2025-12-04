@@ -46,7 +46,7 @@
       <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
       <maven.compiler.source>11</maven.compiler.source>
       <maven.compiler.target>11</maven.compiler.target>
-      <openLineageVersion>1.12.0</openLineageVersion>
+      <openLineageVersion>1.40.1</openLineageVersion>
       <spotless.version>2.41.1</spotless.version>
       <maven-javadoc-plugin.version>3.6.0</maven-javadoc-plugin.version>
       <maven-source-plugin.version>3.3.0</maven-source-plugin.version>
@@ -157,6 +157,7 @@
          <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-shade-plugin</artifactId>
+            <version>3.5.1</version>
             <executions>
                <execution>
                   <phase>package</phase>

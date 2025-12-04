@@ -42,6 +42,8 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.WeakHashMap;
 import java.util.stream.Collectors;
+
+import io.openlineage.spark.api.SparkOpenLineageConfig;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.output.ByteArrayOutputStream;
 import org.apache.hadoop.conf.Configuration;
@@ -306,8 +308,8 @@ public class OpenMetadataSparkListener extends org.apache.spark.scheduler.SparkL
     SparkEnv sparkEnv = SparkEnv$.MODULE$.get();
     if (sparkEnv != null) {
       try {
-        ArgumentParser args = OpenMetadataArgumentParser.parse(sparkEnv.conf());
-        contextFactory = new ContextFactory(new EventEmitter(args, appName), meterRegistry);
+        SparkOpenLineageConfig config = ArgumentParser.parse(sparkEnv.conf());
+        contextFactory = new ContextFactory(new EventEmitter(config, appName), meterRegistry, config);
       } catch (URISyntaxException e) {
         log.error("Unable to parse open lineage endpoint. Lineage events will not be collected", e);
       }
