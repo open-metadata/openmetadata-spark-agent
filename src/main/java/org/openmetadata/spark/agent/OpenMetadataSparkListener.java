@@ -24,13 +24,13 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.openlineage.client.Environment;
 import io.openlineage.client.OpenLineage;
-import io.openlineage.spark.agent.ArgumentParser;
 import io.openlineage.spark.agent.EventEmitter;
 import io.openlineage.spark.agent.JobMetricsHolder;
 import io.openlineage.spark.agent.Versions;
 import io.openlineage.spark.agent.lifecycle.ContextFactory;
 import io.openlineage.spark.agent.lifecycle.ExecutionContext;
 import io.openlineage.spark.agent.util.ScalaConversionUtils;
+import io.openlineage.spark.api.SparkOpenLineageConfig;
 import java.io.PrintWriter;
 import java.net.URISyntaxException;
 import java.time.ZonedDateTime;
@@ -306,8 +306,9 @@ public class OpenMetadataSparkListener extends org.apache.spark.scheduler.SparkL
     SparkEnv sparkEnv = SparkEnv$.MODULE$.get();
     if (sparkEnv != null) {
       try {
-        ArgumentParser args = OpenMetadataArgumentParser.parse(sparkEnv.conf());
-        contextFactory = new ContextFactory(new EventEmitter(args, appName), meterRegistry);
+        SparkOpenLineageConfig config = OpenMetadataArgumentParser.parse(sparkEnv.conf());
+        contextFactory =
+            new ContextFactory(new EventEmitter(config, appName), meterRegistry, config);
       } catch (URISyntaxException e) {
         log.error("Unable to parse open lineage endpoint. Lineage events will not be collected", e);
       }

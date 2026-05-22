@@ -7,20 +7,18 @@ public class OpenMetadataTransportTest {
   @Test
   public void testExtractDbNameFromRedshiftUrl() {
     String result =
-        createOpenMetadataTransport().extractDbNameFromUrl("redshift://localhost:5439/warehouse");
-    Assert.assertEquals("public", result);
+        OpenMetadataTransport
+            .extractDbNameFromUrl(
+                "redshift://localhost:5439/warehouse");
+    Assert.assertEquals("warehouse", result);
   }
 
   @Test
   public void testExtractDbNameFromMysqlUrl() {
     String result =
-        createOpenMetadataTransport()
+        OpenMetadataTransport
             .extractDbNameFromUrl(
                 "mysql://localhost:3306/experiments?serverTimezone=UTC&rewriteBatchedStatements=true&useSSL=false");
     Assert.assertEquals("experiments", result);
-  }
-
-  private OpenMetadataTransport createOpenMetadataTransport() {
-    return new OpenMetadataTransport(new OpenMetadataConfig());
   }
 }

@@ -125,6 +125,16 @@ public final class OpenMetadataTransport extends Transport implements Closeable 
   }
 
   @Override
+  public void emit(@NonNull OpenLineage.DatasetEvent datasetEvent) {
+    log.debug("DatasetEvent emit is not supported by OpenMetadataTransport");
+  }
+
+  @Override
+  public void emit(@NonNull OpenLineage.JobEvent jobEvent) {
+    log.debug("JobEvent emit is not supported by OpenMetadataTransport");
+  }
+
+  @Override
   public void emit(@NonNull OpenLineage.RunEvent runEvent) {
     try {
       log.debug(
@@ -509,7 +519,7 @@ public final class OpenMetadataTransport extends Transport implements Closeable 
     return createPutRequest("/api/v1/pipelines", jsonRequest);
   }
 
-  public String extractDbNameFromUrl(String url) {
+  public static String extractDbNameFromUrl(String url) {
     if (url != null) {
       Pattern pattern = Pattern.compile("^[^:]+://[^/]+:[0-9]+/([^?]+)");
       Matcher matcher = pattern.matcher(url);

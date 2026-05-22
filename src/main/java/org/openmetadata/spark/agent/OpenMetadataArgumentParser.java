@@ -20,16 +20,14 @@ package org.openmetadata.spark.agent;
 
 import static io.openlineage.spark.agent.util.SparkConfUtils.findSparkConfigKey;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.openlineage.client.OpenLineageClientUtils;
-import io.openlineage.client.OpenLineageYaml;
-import io.openlineage.spark.agent.ArgumentParser;
-import io.openlineage.spark.agent.ArgumentParser.ArgumentParserBuilder;
+import io.openlineage.spark.shaded.com.fasterxml.jackson.core.type.TypeReference;
+import io.openlineage.spark.shaded.com.fasterxml.jackson.databind.ObjectMapper;
+import io.openlineage.spark.shaded.com.fasterxml.jackson.databind.node.ArrayNode;
+import io.openlineage.spark.shaded.com.fasterxml.jackson.databind.node.ObjectNode;
 import io.openlineage.spark.agent.UrlParser;
+import io.openlineage.spark.api.SparkOpenLineageConfig;
 import java.io.ByteArrayInputStream;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -72,8 +70,7 @@ public class OpenMetadataArgumentParser {
   public static final String SPARK_CONF_CUSTOM_ENVIRONMENT_VARIABLES =
       "spark.openmetadata.facets.custom_environment_variables";
 
-  public static ArgumentParser parse(SparkConf conf) {
-    ArgumentParserBuilder builder = ArgumentParser.builder();
+  public static SparkOpenLineageConfig parse(SparkConf conf) {
     conf.setIfMissing(SPARK_CONF_DISABLED_FACETS, DEFAULT_DISABLED_FACETS);
     conf.setIfMissing(SPARK_CONF_TRANSPORT_TYPE, "console");
 
@@ -81,19 +78,19 @@ public class OpenMetadataArgumentParser {
       findSparkConfigKey(conf, SPARK_CONF_HTTP_URL)
           .ifPresent(url -> UrlParser.parseUrl(url).forEach(conf::set));
     }
+    SparkOpenLineageConfig config = extractOpenLineageConfFromSparkConf(conf);
     findSparkConfigKey(conf, SPARK_CONF_APP_NAME)
         .filter(str -> !str.isEmpty())
-        .ifPresent(builder::overriddenAppName);
-    findSparkConfigKey(conf, SPARK_CONF_NAMESPACE).ifPresent(builder::namespace);
-    findSparkConfigKey(conf, SPARK_CONF_PARENT_JOB_NAME).ifPresent(builder::parentJobName);
+        .ifPresent(config::setOverriddenAppName);
+    findSparkConfigKey(conf, SPARK_CONF_NAMESPACE).ifPresent(config::setNamespace);
+    findSparkConfigKey(conf, SPARK_CONF_PARENT_JOB_NAME).ifPresent(config::setParentJobName);
     findSparkConfigKey(conf, SPARK_CONF_PARENT_JOB_NAMESPACE)
-        .ifPresent(builder::parentJobNamespace);
-    findSparkConfigKey(conf, SPARK_CONF_PARENT_RUN_ID).ifPresent(builder::parentRunId);
-    builder.openLineageYaml(OpenMetadataArgumentParser.extractOpenlineageConfFromSparkConf(conf));
-    return builder.build();
+        .ifPresent(config::setParentJobNamespace);
+    findSparkConfigKey(conf, SPARK_CONF_PARENT_RUN_ID).ifPresent(config::setParentRunId);
+    return config;
   }
 
-  public static OpenLineageYaml extractOpenlineageConfFromSparkConf(SparkConf conf) {
+  public static SparkOpenLineageConfig extractOpenLineageConfFromSparkConf(SparkConf conf) {
     List<Tuple2<String, String>> properties = filterProperties(conf);
     ObjectMapper objectMapper = new ObjectMapper();
     ObjectNode objectNode = objectMapper.createObjectNode();
@@ -125,9 +122,10 @@ public class OpenMetadataArgumentParser {
       }
     }
     try {
-      return OpenLineageClientUtils.loadOpenLineageYaml(
-          new ByteArrayInputStream(objectMapper.writeValueAsBytes(objectNode)));
-    } catch (IOException e) {
+      return OpenLineageClientUtils.loadOpenLineageConfigJson(
+          new ByteArrayInputStream(objectMapper.writeValueAsBytes(objectNode)),
+          new TypeReference<SparkOpenLineageConfig>() {});
+    } catch (Exception e) {
       throw new RuntimeException(e);
     }
   }
